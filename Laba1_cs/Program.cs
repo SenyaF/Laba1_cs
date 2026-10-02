@@ -5,99 +5,109 @@ using System.Text;
 
 namespace Laba1_cs
 {
-    public struct GeneticData
-    {
-        public string protein;     // название белка
-        public string organism;    // название организма
-        public string amino_acids; // цепочка аминокислот
-    }
-
     class Program
     {
-        static void Main(string[] args)
+        // Структура строго по ТЗ
+        public struct GeneticData
         {
-            string seqFile = "sequences.txt";
-            string cmdFile = "commands.txt";
-            string outFile = "genedata.txt";
+            public string protein;     // название белка
+            public string organism;    // название организма
+            public string amino_acids; // цепочка аминокислот 
+        }
 
-            if (!File.Exists(seqFile) || !File.Exists(cmdFile))
+        // Структура для команд из образца
+        struct Command
+        {
+            public string name;
+            public string parameter1;
+            public string parameter2;
+        }
+
+        // Метод чтения команд из образца
+        static List<Command> ReadCommands(string filename)
+        {
+            List<Command> commands = new List<Command>();
+            if (!File.Exists(filename))
             {
-                Console.WriteLine("Ошибка: отсутствуют входные файлы sequences.txt или commands.txt в папке приложения!");
-                return;
+                return commands;
             }
 
-            // 1. Чтение базы белков
-            List<GeneticData> database = new List<GeneticData>();
-            string[] seqLines = File.ReadAllLines(seqFile);
-
-            foreach (var line in seqLines)
+            using (StreamReader reader = new StreamReader(filename))
             {
-                if (string.IsNullOrWhiteSpace(line))
+                while (!reader.EndOfStream)
                 {
-                    continue;
-                }
-
-                string[] parts = line.Split('\t');
-                if (parts.Length >= 3)
-                {
-                    GeneticData data;
-                    data.protein = parts[0].Trim();
-                    data.organism = parts[1].Trim();
-                    data.amino_acids = RLDecoding(parts[2].Trim());
-
-                    database.Add(data);
-                }
-            }
-
-            // 2. Потоковое чтение команд и запись результатов
-            using (StreamReader reader = new StreamReader(cmdFile))
-            using (StreamWriter writer = new StreamWriter(outFile, false, Encoding.UTF8))
-            {
-                writer.WriteLine("Иван Иванов"); // <-- Замените на ваши имя и фамилию
-                writer.WriteLine("Genetic Searching");
-                writer.WriteLine(new string('-', 72));
-
-                string cmdLine;
-                int opIndex = 1;
-
-                while ((cmdLine = reader.ReadLine()) != null)
-                {
-                    if (string.IsNullOrWhiteSpace(cmdLine))
+                    string line = reader.ReadLine();
+                    if (string.IsNullOrWhiteSpace(line))
                     {
                         continue;
                     }
 
-                    string[] parts = cmdLine.Split('\t');
-                    string command = parts[0].Trim();
+                    string[] parts = line.Split('\t');
+                    Command command;
+                    command.name = String.Empty;
+                    command.parameter1 = String.Empty;
+                    command.parameter2 = String.Empty;
 
-                    if (command == "search" && parts.Length >= 2)
+                    if (parts.Length == 2)
                     {
-                        ExecuteSearch(database, parts[1].Trim(), opIndex, writer);
+                        command.name = parts[0].Trim();
+                        command.parameter1 = parts[1].Trim();
                     }
-                    else if (command == "diff" && parts.Length >= 3)
+                    else if (parts.Length >= 3)
                     {
-                        ExecuteDiff(database, parts[1].Trim(), parts[2].Trim(), opIndex, writer);
-                    }
-                    else if (command == "mode" && parts.Length >= 2)
-                    {
-                        ExecuteMode(database, parts[1].Trim(), opIndex, writer);
+                        command.name = parts[0].Trim();
+                        command.parameter1 = parts[1].Trim();
+                        command.parameter2 = parts[2].Trim();
                     }
 
-                    opIndex++;
+                    commands.Add(command);
                 }
             }
-
-            Console.WriteLine("Вычисления завершены! Результаты записаны в genedata.txt");
+            return commands;
         }
 
-        public static string RLDecoding(string amino_acids)
+        // Метод чтения данных белков из образца
+        static List<GeneticData> ReadData(string filename)
+        {
+            List<GeneticData> data = new List<GeneticData>();
+            if (!File.Exists(filename))
+            {
+                return data;
+            }
+
+            using (StreamReader reader = new StreamReader(filename))
+            {
+                while (!reader.EndOfStream)
+                {
+                    string line = reader.ReadLine();
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
+
+                    string[] parts = line.Split('\t');
+                    if (parts.Length >= 3)
+                    {
+                        GeneticData protein;
+                        protein.protein = parts[0].Trim();
+                        protein.organism = parts[1].Trim();
+                        protein.amino_acids = RLDecoding(parts[2].Trim());
+                        data.Add(protein);
+                    }
+                }
+            }
+            return data;
+        }
+
+        // Метод распаковки RLE
+        static string RLDecoding(string amino_acids)
         {
             if (string.IsNullOrEmpty(amino_acids))
             {
                 return "";
             }
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder decoded = new StringBuilder();
             int count = 0;
 
             for (int i = 0; i < amino_acids.Length; i++)
@@ -114,21 +124,22 @@ namespace Laba1_cs
                     {
                         repeat = count;
                     }
-                    sb.Append(ch, repeat);
+                    decoded.Append(ch, repeat);
                     count = 0;
                 }
             }
-            return sb.ToString();
+            return decoded.ToString();
         }
 
-        public static string RLEncoding(string amino_acids)
+        // Метод запаковки RLE
+        static string RLEncoding(string amino_acids)
         {
             if (string.IsNullOrEmpty(amino_acids))
             {
                 return "";
             }
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder encoded = new StringBuilder();
             int count = 1;
 
             for (int i = 1; i <= amino_acids.Length; i++)
@@ -141,17 +152,47 @@ namespace Laba1_cs
                 {
                     if (count > 2)
                     {
-                        sb.Append(count);
+                        encoded.Append(count);
                     }
                     else if (count == 2)
                     {
-                        sb.Append(amino_acids[i - 1]);
+                        encoded.Append(amino_acids[i - 1]);
                     }
-                    sb.Append(amino_acids[i - 1]);
+                    encoded.Append(amino_acids[i - 1]);
                     count = 1;
                 }
             }
-            return sb.ToString();
+            return encoded.ToString();
+        }
+
+        // Обработчик команд
+        static void CommandHandler(List<GeneticData> proteins, List<Command> commands, string outputFilename)
+        {
+            using (StreamWriter writer = new StreamWriter(outputFilename, false, Encoding.UTF8))
+            {
+                writer.WriteLine("Dwight Barnette");
+                writer.WriteLine("Genetic Searching");
+                writer.WriteLine(new string('-', 72));
+
+                for (int i = 0; i < commands.Count; i++)
+                {
+                    int opIndex = i + 1;
+                    Command cmd = commands[i];
+
+                    if (cmd.name == "search")
+                    {
+                        ExecuteSearch(proteins, cmd.parameter1, opIndex, writer);
+                    }
+                    else if (cmd.name == "diff")
+                    {
+                        ExecuteDiff(proteins, cmd.parameter1, cmd.parameter2, opIndex, writer);
+                    }
+                    else if (cmd.name == "mode")
+                    {
+                        ExecuteMode(proteins, cmd.parameter1, opIndex, writer);
+                    }
+                }
+            }
         }
 
         static void ExecuteSearch(List<GeneticData> database, string query, int opIndex, StreamWriter writer)
@@ -263,6 +304,23 @@ namespace Laba1_cs
             writer.WriteLine(maxChar);
             writer.WriteLine(maxCount);
             writer.WriteLine(new string('-', 72));
+        }
+
+        static void Main(string[] args)
+        {
+            string seqFile = "sequences.txt";
+            string cmdFile = "commands.txt";
+            string outFile = "genedata.txt";
+            // Здесь теперь всё строго типизировано с угловыми скобками:
+            List<GeneticData> database = ReadData(seqFile);
+            List<Command> commands = ReadCommands(cmdFile);
+            if (database.Count == 0 || commands.Count == 0)
+            {
+                Console.WriteLine("Внимание: Убедитесь, что файлы sequences.txt и commands.txt лежат в bin/Debug/net8.0/");
+                return;
+            }
+            CommandHandler(database, commands, outFile);
+            Console.WriteLine("Программа успешно выполнена! Результаты сохранены в genedata.txt");
         }
     }
 }
