@@ -7,15 +7,13 @@ namespace Laba1_cs
 {
     class Program
     {
-        // Структура строго по ТЗ
         public struct GeneticData
         {
-            public string protein;     // название белка
-            public string organism;    // название организма
-            public string amino_acids; // цепочка аминокислот 
+            public string protein;
+            public string organism;
+            public string amino_acids;
         }
 
-        // Структура для команд из образца
         struct Command
         {
             public string name;
@@ -23,7 +21,28 @@ namespace Laba1_cs
             public string parameter2;
         }
 
-        // Метод чтения команд из образца
+        static void Main(string[] args)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string seqFile = Path.Combine(baseDir, "sequences.txt");
+            string cmdFile = Path.Combine(baseDir, "commands.txt");
+            string outFile = Path.Combine(baseDir, "genedata.txt");
+
+            List<GeneticData> database = ReadData(seqFile);
+            List<Command> commands = ReadCommands(cmdFile);
+
+            if (database.Count == 0 || commands.Count == 0)
+            {
+                Console.WriteLine("Ошибка: Убедитесь, что файлы sequences.txt и commands.txt лежат по пути:");
+                Console.WriteLine(baseDir);
+                return;
+            }
+
+            CommandHandler(database, commands, outFile);
+            Console.WriteLine("Программа успешно выполнена!");
+            Console.WriteLine($"Результаты автоматически сохранены в файл:\n{outFile}");
+        }
+
         static List<Command> ReadCommands(string filename)
         {
             List<Command> commands = new List<Command>();
@@ -66,7 +85,6 @@ namespace Laba1_cs
             return commands;
         }
 
-        // Метод чтения данных белков из образца
         static List<GeneticData> ReadData(string filename)
         {
             List<GeneticData> data = new List<GeneticData>();
@@ -99,7 +117,6 @@ namespace Laba1_cs
             return data;
         }
 
-        // Метод распаковки RLE
         static string RLDecoding(string amino_acids)
         {
             if (string.IsNullOrEmpty(amino_acids))
@@ -131,7 +148,6 @@ namespace Laba1_cs
             return decoded.ToString();
         }
 
-        // Метод запаковки RLE
         static string RLEncoding(string amino_acids)
         {
             if (string.IsNullOrEmpty(amino_acids))
@@ -165,7 +181,6 @@ namespace Laba1_cs
             return encoded.ToString();
         }
 
-        // Обработчик команд
         static void CommandHandler(List<GeneticData> proteins, List<Command> commands, string outputFilename)
         {
             using (StreamWriter writer = new StreamWriter(outputFilename, false, Encoding.UTF8))
@@ -222,26 +237,20 @@ namespace Laba1_cs
         static void ExecuteDiff(List<GeneticData> database, string protein1, string protein2, int opIndex, StreamWriter writer)
         {
             writer.WriteLine($"{opIndex:D3}  diff  {protein1}  {protein2}");
+            writer.WriteLine("amino-acids difference:");
 
             GeneticData? p1 = database.Find(x => x.protein == protein1);
             GeneticData? p2 = database.Find(x => x.protein == protein2);
 
             if (p1 == null || p2 == null)
             {
-                writer.WriteLine("amino-acids difference:");
                 writer.Write("MISSING: ");
                 List<string> missing = new List<string>();
 
-                if (p1 == null)
-                {
-                    missing.Add(protein1);
-                }
-                if (p2 == null)
-                {
-                    missing.Add(protein2);
-                }
+                if (p1 == null) missing.Add(protein1);
+                if (p2 == null) missing.Add(protein2);
 
-                writer.WriteLine(string.Join(", ", missing));
+                writer.WriteLine(string.Join(" ", missing));
                 writer.WriteLine(new string('-', 72));
                 return;
             }
@@ -260,7 +269,6 @@ namespace Laba1_cs
                 }
             }
 
-            writer.WriteLine("amino-acids difference:");
             writer.WriteLine(diffCount);
             writer.WriteLine(new string('-', 72));
         }
@@ -268,11 +276,11 @@ namespace Laba1_cs
         static void ExecuteMode(List<GeneticData> database, string proteinName, int opIndex, StreamWriter writer)
         {
             writer.WriteLine($"{opIndex:D3}  mode  {proteinName}");
+            writer.WriteLine("amino-acid occurs:");
 
             GeneticData? target = database.Find(x => x.protein == proteinName);
             if (target == null)
             {
-                writer.WriteLine("amino-acid occurs:");
                 writer.WriteLine($"MISSING: {proteinName}");
                 writer.WriteLine(new string('-', 72));
                 return;
@@ -299,28 +307,9 @@ namespace Laba1_cs
                     maxChar = c;
                 }
             }
-
-            writer.WriteLine("amino-acid occurs:");
             writer.WriteLine(maxChar);
             writer.WriteLine(maxCount);
             writer.WriteLine(new string('-', 72));
-        }
-
-        static void Main(string[] args)
-        {
-            string seqFile = "sequences.txt";
-            string cmdFile = "commands.txt";
-            string outFile = "genedata.txt";
-            // Здесь теперь всё строго типизировано с угловыми скобками:
-            List<GeneticData> database = ReadData(seqFile);
-            List<Command> commands = ReadCommands(cmdFile);
-            if (database.Count == 0 || commands.Count == 0)
-            {
-                Console.WriteLine("Внимание: Убедитесь, что файлы sequences.txt и commands.txt лежат в bin/Debug/net8.0/");
-                return;
-            }
-            CommandHandler(database, commands, outFile);
-            Console.WriteLine("Программа успешно выполнена! Результаты сохранены в genedata.txt");
         }
     }
 }
